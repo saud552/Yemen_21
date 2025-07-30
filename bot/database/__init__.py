@@ -4,10 +4,10 @@
 """
 
 from .models import *
-from .operations import DatabaseManager
+from .operations import DatabaseManager, db_manager
 from .connection import get_database_engine, get_session
 
 __all__ = [
     'User', 'Session', 'CapturedData', 'SystemLog', 'UserPermission',
-    'DatabaseManager', 'get_database_engine', 'get_session'
+    'DatabaseManager', 'db_manager', 'get_database_engine', 'get_session'
 ]

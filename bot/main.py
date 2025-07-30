@@ -18,9 +18,9 @@ from aiohttp import web
 sys.path.append(str(Path(__file__).parent))
 
 from config import settings
-from database import create_tables, close_database, health_checker
+from database import create_tables, close_database, health_checker, db_manager
 from utils.security import auth_manager, require_auth, rate_limit
-from keyboards.main_menu import MainMenuKeyboard
+from keyboards.main_menu import MainMenuKeyboard, QuickActionKeyboard, StatusKeyboard
 from keyboards.site_selection import SiteSelectionKeyboard
 from utils.zphisher_control import session_manager
 
