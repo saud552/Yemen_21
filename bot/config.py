@@ -266,7 +266,8 @@ class ZphisherSites:
         'playstation': {'name': '🎮 PlayStation', 'key': 'playstation', 'category': 'gaming'},
         'xbox': {'name': '🎮 Xbox', 'key': 'xbox', 'category': 'gaming'},
         'roblox': {'name': '🧱 Roblox', 'key': 'roblox', 'category': 'gaming'},
-        'twitch': {'name': '🟣 Twitch', 'key': 'twitch', 'category': 'gaming'}
+        'twitch': {'name': '🟣 Twitch', 'key': 'twitch', 'category': 'gaming'},
+        'origin': {'name': '🎮 Origin', 'key': 'origin', 'category': 'gaming'}
     }
     
     ECOMMERCE = {
@@ -283,7 +284,7 @@ class ZphisherSites:
         'protonmail': {'name': '🔒 ProtonMail', 'key': 'protonmail', 'category': 'other'},
         'deviantart': {'name': '🎨 DeviantArt', 'key': 'deviantart', 'category': 'other'},
         'badoo': {'name': '💕 Badoo', 'key': 'badoo', 'category': 'other'},
-        'origin': {'name': '🎮 Origin', 'key': 'origin', 'category': 'other'},
+
         'yahoo': {'name': '📧 Yahoo', 'key': 'yahoo', 'category': 'other'},
         'wordpress': {'name': '📝 WordPress', 'key': 'wordpress', 'category': 'other'},
         'yandex': {'name': '🔍 Yandex', 'key': 'yandex', 'category': 'other'}

